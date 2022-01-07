@@ -140,6 +140,19 @@ func (c *WatchClient) Stop() {
 	}
 }
 
+// wait until caches are warmed-up
+func (c *WatchClient) WaitForCacheSync() error {
+	c.logger.Info("Waiting for pod cache to sync")
+	if !cache.WaitForCacheSync(c.stopCh, c.informer.HasSynced) {
+		c.logger.Error("Timed out waiting for pod cache to sync")
+		return fmt.Errorf("timed out waiting for pod cache to sync")
+	}
+	if err := c.op.WaitForCacheSync(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *WatchClient) handlePodAdd(obj interface{}) {
 	observability.RecordPodAdded()
 	if pod, ok := obj.(*api_v1.Pod); ok {

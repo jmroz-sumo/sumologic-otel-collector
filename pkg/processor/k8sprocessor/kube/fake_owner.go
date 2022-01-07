@@ -94,6 +94,9 @@ func (op *fakeOwnerCache) Start() {}
 // Stop
 func (op *fakeOwnerCache) Stop() {}
 
+// WaitForCacheSync
+func (op *fakeOwnerCache) WaitForCacheSync() error { return nil }
+
 // GetServices fetches list of services for a given pod
 func (op *fakeOwnerCache) GetServices(pod *api_v1.Pod) []string {
 	return []string{"foo", "bar"}

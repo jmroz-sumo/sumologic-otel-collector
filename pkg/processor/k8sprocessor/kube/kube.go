@@ -60,6 +60,7 @@ type Client interface {
 	GetPod(PodIdentifier) (*Pod, bool)
 	Start()
 	Stop()
+	WaitForCacheSync() error
 }
 
 // ClientProvider defines a func type that returns a new Client.

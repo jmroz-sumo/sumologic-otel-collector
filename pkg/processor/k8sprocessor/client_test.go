@@ -84,3 +84,8 @@ func (f *fakeClient) Start() {
 func (f *fakeClient) Stop() {
 	close(f.StopCh)
 }
+
+// WaitForCacheSync is a noop for FakeClient.
+func (f *fakeClient) WaitForCacheSync() error {
+	return nil
+}

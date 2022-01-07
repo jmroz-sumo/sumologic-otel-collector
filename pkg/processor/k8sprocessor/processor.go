@@ -59,6 +59,9 @@ func (kp *kubernetesprocessor) initKubeClient(logger *zap.Logger, kubeClient kub
 func (kp *kubernetesprocessor) Start(_ context.Context, _ component.Host) error {
 	if !kp.passthroughMode {
 		go kp.kc.Start()
+		if err := kp.kc.WaitForCacheSync(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

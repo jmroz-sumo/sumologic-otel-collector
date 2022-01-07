@@ -15,6 +15,7 @@
 package kube
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 
@@ -54,6 +55,7 @@ type OwnerAPI interface {
 	GetOwners(pod *api_v1.Pod) []*ObjectOwner
 	GetNamespace(pod *api_v1.Pod) *api_v1.Namespace
 	GetServices(pod *api_v1.Pod) []string
+	WaitForCacheSync() error
 	Start()
 	Stop()
 }
@@ -95,6 +97,20 @@ func (op *OwnerCache) Start() {
 // Stop shutdowns the informers
 func (op *OwnerCache) Stop() {
 	close(op.stopCh)
+}
+
+// wait until caches are warmed-up
+func (op *OwnerCache) WaitForCacheSync() error {
+	informerSyncFuncs := []cache.InformerSynced{}
+	for _, informer := range op.informers {
+		informerSyncFuncs = append(informerSyncFuncs, informer.HasSynced)
+	}
+	op.logger.Info("Waiting for owner caches to sync")
+	if !cache.WaitForCacheSync(op.stopCh, informerSyncFuncs...) {
+		op.logger.Error("Timed out waiting for owner caches to sync")
+		return fmt.Errorf("timed out waiting for owner caches to sync")
+	}
+	return nil
 }
 
 func newOwnerProvider(
