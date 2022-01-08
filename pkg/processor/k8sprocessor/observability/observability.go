@@ -51,7 +51,8 @@ var (
 	mOtherAdded   = stats.Int64("otelsvc/k8s/other_added", "Number of other add events received", "1")
 	mOtherDeleted = stats.Int64("otelsvc/k8s/other_deleted", "Number of other delete events received", "1")
 
-	mIPLookupMiss = stats.Int64("otelsvc/k8s/ip_lookup_miss", "Number of times pod by IP lookup failed.", "1")
+	mIPLookupMiss    = stats.Int64("otelsvc/k8s/ip_lookup_miss", "Number of times pod by IP lookup failed.", "1")
+	mOwnerLookupMiss = stats.Int64("otelsvc/k8s/owner_lookup_miss", "Number of time pod owner lookup failed", "1")
 )
 
 var viewPodsUpdated = &view.View{
@@ -142,6 +143,11 @@ func RecordOtherDeleted() {
 // RecordIPLookupMiss increments the metric that records Pod lookup by IP misses.
 func RecordIPLookupMiss() {
 	stats.Record(context.Background(), mIPLookupMiss.M(int64(1)))
+}
+
+// RecordOwnerLookupMiss increments the metric that records Pod owner lookup misses.
+func RecordOwnerLookupMiss() {
+	stats.Record(context.Background(), mOwnerLookupMiss.M(int64(1)))
 }
 
 // RecordPodTableSize store size of pod table field in WatchClient

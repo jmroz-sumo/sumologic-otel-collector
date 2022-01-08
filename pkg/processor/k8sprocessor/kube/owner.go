@@ -358,6 +358,15 @@ func (op *OwnerCache) GetOwners(pod *api_v1.Pod) []*ObjectOwner {
 					visited[ownerUID] = true
 				}
 			}
+		} else {
+			var ownerReference meta_v1.OwnerReference
+			for _, or := range pod.OwnerReferences {
+				if or.UID == uid {
+					ownerReference = or
+				}
+			}
+			op.logger.Debug("Owner lookup miss", zap.Any("owner name", ownerReference.Name), zap.Any("owner kind", ownerReference.Kind), zap.Any("pod name", pod.Name))
+			observability.RecordOwnerLookupMiss()
 		}
 		op.cacheMutex.RUnlock()
 	}
