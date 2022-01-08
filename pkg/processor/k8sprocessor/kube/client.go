@@ -236,6 +236,7 @@ func (c *WatchClient) GetPod(identifier PodIdentifier) (*Pod, bool) {
 		if pod.Ignore {
 			return nil, false
 		}
+		c.checkPodAttributes(pod)
 		return pod, ok
 	}
 	observability.RecordIPLookupMiss()
@@ -370,6 +371,26 @@ func (c *WatchClient) extractPodAttributes(pod *api_v1.Pod) map[string]string {
 		c.extractLabelsIntoTags(r, pod.Annotations, tags)
 	}
 	return tags
+}
+
+func (c *WatchClient) checkPodAttributes(pod *Pod) {
+	if c.Rules.ContainerID {
+		if _, ok := pod.Attributes[c.Rules.Tags.ContainerID]; !ok {
+			c.logger.Info("No container id for pod", zap.Any("pod name", pod.Name))
+		}
+	}
+
+	if c.Rules.ContainerName {
+		if _, ok := pod.Attributes[c.Rules.Tags.ContainerName]; !ok {
+			c.logger.Info("No container name for pod", zap.Any("pod name", pod.Name))
+		}
+	}
+
+	if c.Rules.ContainerImage {
+		if _, ok := pod.Attributes[c.Rules.Tags.ContainerImage]; !ok {
+			c.logger.Info("No container name for pod", zap.Any("pod name", pod.Name))
+		}
+	}
 }
 
 func (c *WatchClient) extractLabelsIntoTags(r FieldExtractionRule, labels map[string]string, tags map[string]string) {
