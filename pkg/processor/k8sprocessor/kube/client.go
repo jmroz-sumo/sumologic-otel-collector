@@ -214,6 +214,7 @@ func (c *WatchClient) deleteLoop(interval time.Duration, gracePeriod time.Durati
 					// and the underlying state (ip<>pod mapping) has not changed.
 					if p.Name == d.podName {
 						delete(c.Pods, d.id)
+						c.logger.Debug("deleted pod", zap.Any("pod id", d.id))
 					}
 				}
 			}
@@ -234,12 +235,14 @@ func (c *WatchClient) GetPod(identifier PodIdentifier) (*Pod, bool) {
 	c.m.RUnlock()
 	if ok {
 		if pod.Ignore {
+			c.logger.Debug("ignoring pod", zap.Any("pod id", identifier))
 			return nil, false
 		}
 		c.checkPodAttributes(pod)
 		return pod, ok
 	}
 	observability.RecordIPLookupMiss()
+	c.logger.Info("Pod cache miss", zap.Any("pod id", identifier))
 	return nil, false
 }
 
@@ -364,6 +367,8 @@ func (c *WatchClient) extractPodAttributes(pod *api_v1.Pod) map[string]string {
 			for _, r := range c.Rules.NamespaceLabels {
 				c.extractLabelsIntoTags(r, namespace.Labels, tags)
 			}
+		} else {
+			c.logger.Debug("Namespace cache miss", zap.Any("pod name", pod.Name), zap.Any("namespace name", pod.Namespace))
 		}
 	}
 
@@ -438,8 +443,9 @@ func (c *WatchClient) addOrUpdatePod(pod *api_v1.Pod) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	podIdentifiers := []PodIdentifier{}
 	if pod.UID != "" {
-		c.Pods[PodIdentifier(pod.UID)] = newPod
+		podIdentifiers = append(podIdentifiers, PodIdentifier(pod.UID))
 	}
 	if pod.Status.PodIP != "" {
 		// compare initial scheduled timestamp for existing pod and new pod with same IP
@@ -448,15 +454,22 @@ func (c *WatchClient) addOrUpdatePod(pod *api_v1.Pod) {
 		// the old pod came in later.
 		if p, ok := c.Pods[PodIdentifier(pod.Status.PodIP)]; ok {
 			if p.StartTime != nil && pod.Status.StartTime.Before(p.StartTime) {
-				return
+				c.logger.Debug("discarding stale pod update for ip", zap.Any("pod ip", pod.Status.PodIP))
+			} else {
+				podIdentifiers = append(podIdentifiers, PodIdentifier(pod.Status.PodIP))
 			}
+		} else {
+			podIdentifiers = append(podIdentifiers, PodIdentifier(pod.Status.PodIP))
 		}
-		c.Pods[PodIdentifier(pod.Status.PodIP)] = newPod
 	}
 	// Use pod_name.namespace_name identifier
 	if newPod.Name != "" && newPod.Namespace != "" {
-		c.Pods[PodIdentifier(fmt.Sprintf("%s.%s", newPod.Name, newPod.Namespace))] = newPod
+		podIdentifiers = append(podIdentifiers, PodIdentifier(fmt.Sprintf("%s.%s", newPod.Name, newPod.Namespace)))
 	}
+	for _, podIdentifier := range podIdentifiers {
+		c.Pods[podIdentifier] = newPod
+	}
+	c.logger.Debug("added or updated pod", zap.Any("pod ids", podIdentifiers))
 }
 
 func (c *WatchClient) forgetPod(pod *api_v1.Pod) {

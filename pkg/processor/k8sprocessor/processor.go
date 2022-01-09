@@ -125,6 +125,7 @@ func (kp *kubernetesprocessor) processResource(ctx context.Context, resource pda
 }
 
 func (kp *kubernetesprocessor) getAttributesForPod(identifier kube.PodIdentifier) map[string]string {
+	kp.logger.Debug("Getting pod attributes", zap.Any("pod id", identifier))
 	pod, ok := kp.kc.GetPod(identifier)
 	if !ok {
 		return nil
