@@ -1,10 +1,12 @@
 FROM golang:1.17.5-alpine as builder
-ADD . /src
-WORKDIR /src/otelcolbuilder/
 ENV CGO_ENABLED=0
-RUN apk --update add make gcc g++
-RUN make install
-RUN make build
+ENV BUILDER_BIN_PATH=/go/bin/opentelemetry-collector-builder
+RUN apk --update add make gcc g++ curl git
+ADD ./otelcolbuilder /src/otelcolbuilder
+WORKDIR /src/otelcolbuilder/
+RUN make install-builder BUILDER_BIN_PATH=$BUILDER_BIN_PATH
+ADD . /src
+RUN make build BUILDER_BIN_PATH=$BUILDER_BIN_PATH
 
 FROM alpine:3.15.0 as certs
 RUN apk --update add ca-certificates
