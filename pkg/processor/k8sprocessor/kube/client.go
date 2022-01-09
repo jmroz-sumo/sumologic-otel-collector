@@ -334,7 +334,7 @@ func (c *WatchClient) extractPodAttributes(pod *api_v1.Pod) map[string]string {
 
 	if len(pod.Status.ContainerStatuses) > 0 {
 		cs := pod.Status.ContainerStatuses[0]
-		if c.Rules.ContainerID {
+		if c.Rules.ContainerID && cs.ContainerID != "" {
 			tags[c.Rules.Tags.ContainerID] = cs.ContainerID
 		}
 	}
